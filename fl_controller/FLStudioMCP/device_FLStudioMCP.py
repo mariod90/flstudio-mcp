@@ -290,7 +290,7 @@ def _h_ping(params):
     return {
         "fl_version": _fl_version,
         "protocol_version": PROTOCOL_VERSION,
-        "build": "probe-v16",   # reload marker -- bump to verify reloads take
+        "build": "probe-v16+steps",   # reload marker -- bump to verify reloads take
         "ts": time.time(),
     }
 
@@ -1221,6 +1221,28 @@ def _h_channel_select(p):
             "selected": channels.channelNumber()}
 
 
+def _read_steps(c, n):
+    return "".join("x" if channels.getGridBit(c, i) else "." for i in range(n))
+
+
+def _h_channel_get_steps(p):
+    """Step-sequencer grid of one channel in the current pattern ('x' on, '.' off)."""
+    c = int(p["channel"])
+    n = int(p.get("length", 16))
+    return {"channel": c, "name": channels.getChannelName(c),
+            "pattern": patterns.patternNumber(), "steps": _read_steps(c, n)}
+
+
+def _h_channel_set_steps(p):
+    """Write a step pattern ('x' on, anything else off) into the current pattern."""
+    c = int(p["channel"])
+    steps = str(p["steps"])
+    for i, ch in enumerate(steps):
+        channels.setGridBit(c, i, 1 if ch in "xX1" else 0)
+    return {"channel": c, "name": channels.getChannelName(c),
+            "pattern": patterns.patternNumber(), "steps": _read_steps(c, len(steps))}
+
+
 def _h_arrange_add_marker(p):
     if arrangement is None:
         return {"ok": False, "error": "arrangement module not available"}
@@ -1290,4 +1312,6 @@ _HANDLERS = {
     "channel_select": _h_channel_select,
     "ensure_piano_roll": _h_ensure_piano_roll,
     "pattern_list": _h_pattern_list,
+    "channel_get_steps": _h_channel_get_steps,
+    "channel_set_steps": _h_channel_set_steps,
 }
