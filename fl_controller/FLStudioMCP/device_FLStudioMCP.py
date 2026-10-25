@@ -290,7 +290,7 @@ def _h_ping(params):
     return {
         "fl_version": _fl_version,
         "protocol_version": PROTOCOL_VERSION,
-        "build": "probe-v16+steps",   # reload marker -- bump to verify reloads take
+        "build": "probe-v16+steps2",   # reload marker -- bump to verify reloads take
         "ts": time.time(),
     }
 
@@ -1217,6 +1217,14 @@ def _h_channel_select(p):
         channels.selectOneChannel(idx)
     except Exception as e:
         return {"ok": False, "error": "selectOneChannel: %s" % e}
+    # An already-open Piano roll keeps showing its old channel; close it so the
+    # next ensure_piano_roll reopens it on the newly selected one.
+    wid = getattr(midi, "widPianoRoll", None)
+    try:
+        if wid is not None and ui.getVisible(wid):
+            ui.hideWindow(wid)
+    except Exception:
+        pass
     return {"ok": True, "channel": idx, "name": channels.getChannelName(idx),
             "selected": channels.channelNumber()}
 
@@ -1241,6 +1249,14 @@ def _h_channel_set_steps(p):
         channels.setGridBit(c, i, 1 if ch in "xX1" else 0)
     return {"channel": c, "name": channels.getChannelName(c),
             "pattern": patterns.patternNumber(), "steps": _read_steps(c, len(steps))}
+
+
+def _h_channel_set_target(p):
+    """Route a channel to a mixer insert track."""
+    c = int(p["channel"])
+    channels.setTargetFxTrack(c, int(p["track"]))
+    return {"channel": c, "name": channels.getChannelName(c),
+            "track": channels.getTargetFxTrack(c)}
 
 
 def _h_arrange_add_marker(p):
@@ -1314,4 +1330,5 @@ _HANDLERS = {
     "pattern_list": _h_pattern_list,
     "channel_get_steps": _h_channel_get_steps,
     "channel_set_steps": _h_channel_set_steps,
+    "channel_set_target": _h_channel_set_target,
 }

@@ -46,3 +46,19 @@ def register(mcp: FastMCP) -> None:
         """Write one channel's step grid in the current pattern. Steps beyond the string are untouched.
         Returns the grid read back from FL."""
         return _safe_call("channel_set_steps", {"channel": channel, "steps": steps})
+
+    @mcp.tool(
+        annotations={
+            "title": "Route channel to mixer track",
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
+    )
+    def fl_set_channel_target(
+        channel: Annotated[int, Field(ge=0, description="Channel-rack index (0-based).")],
+        track: Annotated[int, Field(ge=0, le=125, description="Mixer insert track (0 = Master).")],
+    ) -> dict:
+        """Send a channel-rack channel to a mixer insert track."""
+        return _safe_call("channel_set_target", {"channel": channel, "track": track})
